@@ -137,6 +137,7 @@ export default function App() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | 'all'>('all');
   const [activeClipId, setActiveClipId] = useState<string>(initial.clips[0]?.id || '');
+  const [pendingYouTubeUrl, setPendingYouTubeUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Hydrate persisted real media Blobs (uploaded videos, thumbnails, trimmed MP4 clips) from IndexedDB
@@ -253,6 +254,13 @@ export default function App() {
   const handleStartCreating = () => {
     setView('app');
     setActiveTab('dashboard');
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  };
+
+  const handleStartFromYouTubeUrl = (url: string) => {
+    setPendingYouTubeUrl(url);
+    setView('app');
+    setActiveTab('create');
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   };
 
@@ -950,6 +958,7 @@ export default function App() {
         <LandingPage
           onStartCreating={handleStartCreating}
           onOpenTemplates={handleOpenTemplatesFromLanding}
+          onGenerateFromYouTubeUrl={handleStartFromYouTubeUrl}
         />
       ) : (
         <WorkspaceLayout
@@ -972,6 +981,7 @@ export default function App() {
               clips={clips}
               availableCreditsMinutes={settings.availableCreditsMinutes}
               onNavigateCreate={() => setActiveTab('create')}
+              onGenerateFromYouTubeUrl={handleStartFromYouTubeUrl}
               onOpenProject={(projectId) => {
                 setSelectedProjectId(projectId);
                 setActiveTab('projects');
@@ -985,6 +995,8 @@ export default function App() {
               defaultAspectRatio={settings.defaultAspectRatio}
               availableCreditsMinutes={settings.availableCreditsMinutes}
               maxUploadSizeMB={settings.maxUploadSizeMB}
+              initialYouTubeUrl={pendingYouTubeUrl}
+              onConsumeInitialUrl={() => setPendingYouTubeUrl(null)}
               onGenerateClips={handleGenerateClips}
             />
           )}

@@ -248,8 +248,8 @@ export function VideoEditorView({
         </div>
         <h1 className="font-display text-xl font-bold text-[#171717]">No Clips Available to Edit</h1>
         <p className="text-sm text-[#737373] max-w-md mx-auto">
-          Upload a video and cut clips first to open them inside the ClipForge light-theme Video
-          Editor.
+          Paste a YouTube link and generate clips first to open them inside the ClipForge
+          light-theme Video Editor.
         </p>
         <button
           type="button"

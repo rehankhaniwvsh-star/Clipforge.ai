@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import {
+  AlertCircle,
   ArrowRight,
   Check,
   ChevronDown,
   Crop,
   Download,
+  Link2,
   Pause,
   Play,
   Radio,
@@ -12,10 +14,10 @@ import {
   SlidersHorizontal,
   Sparkles,
   Subtitles,
-  UploadCloud,
 } from 'lucide-react';
 import { AspectRatio, CaptionTemplateId } from '../types/clipforge';
 import { CAPTION_TEMPLATES } from '../data/templates';
+import { classifyVideoUrl } from '../utils/urlImport';
 import { BrandMark } from './BrandMark';
 import { CaptionRenderer } from './CaptionRenderer';
 import { DemoModal } from './DemoModal';
@@ -23,6 +25,7 @@ import { DemoModal } from './DemoModal';
 interface LandingPageProps {
   onStartCreating: () => void;
   onOpenTemplates: (templateId?: CaptionTemplateId) => void;
+  onGenerateFromYouTubeUrl: (url: string) => void;
 }
 
 const STUDIO_DEMO_CLIPS: Array<{
@@ -109,24 +112,24 @@ const FEATURES = [
 const WORKFLOW_STEPS = [
   {
     number: '01',
-    icon: UploadCloud,
-    title: 'Upload Your Long Video',
+    icon: Link2,
+    title: 'Paste a YouTube Link',
     description:
-      'Drop MP4, MOV, or WebM footage up to 300 MB. Metadata, thumbnails, and audio tracks prepare locally in your browser.',
+      'Drop any public YouTube video, Shorts, or Live VOD link. ClipForge loads the video metadata, thumbnail, and player instantly—no file uploads needed.',
   },
   {
     number: '02',
     icon: Sparkles,
     title: 'AI Finds the Best Moments',
     description:
-      'Select your content style, clip duration, and aspect ratio. AI isolates complete hooks without cutting off punchlines.',
+      'Select your content style, clip duration, and aspect ratio. Gemini AI isolates complete hooks and punchlines with validated timestamps.',
   },
   {
     number: '03',
     icon: Download,
-    title: 'Refine & Export Real MP4s',
+    title: 'Refine Captions & Export',
     description:
-      'Customize captions, framing, and audio cues inside the light-theme studio, then download clean MP4 shorts ready to post.',
+      'Customize captions, framing, and reaction cues inside the light-theme studio, then export ready-to-share clips and cut packages.',
   },
 ];
 
@@ -139,10 +142,10 @@ const PRICING_TIERS = [
     cta: 'Start Free',
     featured: false,
     points: [
-      'Up to 300 MB local browser uploads',
+      'Instant YouTube video, Shorts & Live VOD links',
       'All 10 caption templates included',
-      'Browser FFmpeg.wasm MP4 rendering',
-      'IndexedDB local project persistence',
+      'Gemini AI viral moment detection',
+      'Browser project persistence & Live Clipper',
     ],
   },
   {
@@ -154,7 +157,7 @@ const PRICING_TIERS = [
     featured: true,
     points: [
       '180 AI analysis minutes / month',
-      '1080p vertical, square & landscape MP4 export',
+      '9:16 vertical, 1:1 square & 16:9 framing',
       'Word-level English, Hindi & Hinglish captions',
       'Optional reaction effects & licensed SFX cues',
     ],
@@ -178,25 +181,31 @@ const PRICING_TIERS = [
 const FAQ_ITEMS = [
   {
     q: 'Do I need to install desktop editing software?',
-    a: 'No. ClipForge AI runs completely in modern desktop and mobile browsers using HTML5 video, Canvas, IndexedDB storage, and WebAssembly FFmpeg rendering.',
+    a: 'No. ClipForge AI runs completely in modern desktop and mobile browsers—just paste a YouTube link and start generating clips right away.',
   },
   {
-    q: 'How does the AI select clips from my video?',
-    a: 'Your browser extracts compact audio chunks and sends them to a secure server-side Gemini AI endpoint. The model reads full conversational context to identify hooks, funny moments, and clean start/end timestamps.',
+    q: 'How does the AI select clips from a YouTube video?',
+    a: 'When you paste a YouTube URL, our server inspects video metadata and sends the requested time window to Gemini AI to identify hooks, funny moments, and clean start/end timestamps.',
   },
   {
     q: 'Can I customize caption colors, fonts, and positions?',
     a: 'Yes. You can switch across 10 studio templates and independently customize font family, font size, text color, keyword highlight color, background box, outline, shadow, alignment, and vertical position.',
   },
   {
-    q: 'Are the exported files real playable MP4 videos?',
-    a: 'Yes. ClipForge AI renders real MP4 video files with your selected trim timestamps, aspect ratio crop, burned-in captions, and synchronized audio.',
+    q: 'What YouTube link formats are supported?',
+    a: 'ClipForge AI supports standard YouTube watch URLs, shortened youtu.be links, YouTube Shorts, and archived YouTube Live VODs.',
   },
 ];
 
-export function LandingPage({ onStartCreating, onOpenTemplates }: LandingPageProps) {
+export function LandingPage({
+  onStartCreating,
+  onOpenTemplates,
+  onGenerateFromYouTubeUrl,
+}: LandingPageProps) {
   const [demoOpen, setDemoOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [heroYtUrl, setHeroYtUrl] = useState('');
+  const [heroYtError, setHeroYtError] = useState<string | null>(null);
 
   // Interactive studio product preview state
   const [activeClipIdx, setActiveClipIdx] = useState(0);
@@ -223,6 +232,24 @@ export function LandingPage({ onStartCreating, onOpenTemplates }: LandingPagePro
     setActiveClipIdx(idx);
     setStudioTemplateId(STUDIO_DEMO_CLIPS[idx].templateId);
     setPlayheadPct(22 + idx * 24);
+  };
+
+  const handleHeroYouTubeSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = heroYtUrl.trim();
+    if (!trimmed) {
+      setHeroYtError('Paste a YouTube link (watch, Shorts, or Live VOD) to generate clips.');
+      return;
+    }
+    const classified = classifyVideoUrl(trimmed);
+    if (classified.status !== 'youtube') {
+      setHeroYtError(
+        'Enter a valid YouTube link such as youtube.com/watch?v=..., youtube.com/live/..., or youtu.be/...'
+      );
+      return;
+    }
+    setHeroYtError(null);
+    onGenerateFromYouTubeUrl(trimmed);
   };
 
   return (
@@ -278,38 +305,84 @@ export function LandingPage({ onStartCreating, onOpenTemplates }: LandingPagePro
           <div className="max-w-7xl mx-auto">
             <div className="max-w-3xl mx-auto text-center space-y-6">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#DC2626]">
-                AI Video Production Studio
+                AI YouTube Clipping Studio
               </p>
               <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight leading-[1.08] text-[#171717] text-balance">
-                Your Long Videos.
+                Paste a YouTube Link.
                 <br />
-                Our AI. <span className="text-[#DC2626]">Endless Shorts.</span>
+                Generate <span className="text-[#DC2626]">Viral Shorts.</span>
               </h1>
               <p className="text-base sm:text-lg text-[#737373] max-w-2xl mx-auto leading-relaxed">
-                Find the moments worth watching. Turn long-form videos into engaging short-form
-                content with AI-powered clipping and captions.
+                Drop any YouTube video, podcast, or livestream VOD link. Gemini AI finds the best
+                hooks, funny moments, and punchlines with ready-to-edit captions—no file upload
+                required.
               </p>
 
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              {/* Hero YouTube Link Generator Form */}
+              <form
+                onSubmit={handleHeroYouTubeSubmit}
+                className="max-w-2xl mx-auto pt-2 space-y-2.5"
+                noValidate
+              >
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-2xl bg-[#FFFFFF] border border-[#E5E5E5] shadow-[0_10px_30px_-14px_rgba(23,23,23,0.12)] focus-within:border-[#DC2626] transition-colors">
+                  <label htmlFor="landing-yt-url-input" className="sr-only">
+                    YouTube Video Link
+                  </label>
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0 px-3 py-1.5">
+                    <Link2 className="h-4 w-4 text-[#DC2626] shrink-0" />
+                    <input
+                      id="landing-yt-url-input"
+                      data-testid="landing-yt-url-input"
+                      type="url"
+                      value={heroYtUrl}
+                      onChange={(e) => {
+                        setHeroYtUrl(e.target.value);
+                        if (heroYtError) setHeroYtError(null);
+                      }}
+                      placeholder="Paste a YouTube link (watch, live, or shorts)..."
+                      className="w-full bg-transparent text-sm text-[#171717] placeholder:text-[#A3A3A3] focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    data-testid="landing-yt-generate-btn"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-semibold transition-colors shadow-xs whitespace-nowrap shrink-0"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>Generate Clips</span>
+                  </button>
+                </div>
+
+                {heroYtError ? (
+                  <div
+                    role="alert"
+                    data-testid="landing-yt-error"
+                    className="inline-flex items-center gap-2 text-xs text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5 text-[#DC2626] shrink-0" />
+                    <span>{heroYtError}</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#737373]">
+                    Supports YouTube watch, Shorts, and Live VOD links · No video upload required
+                  </p>
+                )}
+              </form>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                 <button
                   type="button"
                   onClick={onStartCreating}
                   data-testid="landing-start-creating-btn"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm font-semibold transition-colors shadow-xs whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FFFFFF] hover:bg-[#F5F5F5] border border-[#E5E5E5] text-[#171717] text-xs font-semibold transition-colors whitespace-nowrap"
                 >
-                  <span>Start Creating</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <span>Open Workspace</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-[#DC2626]" />
                 </button>
-                <a
-                  href="#features"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#FFFFFF] hover:bg-[#F5F5F5] border border-[#E5E5E5] text-[#171717] text-sm font-semibold transition-colors whitespace-nowrap"
-                >
-                  <span>Explore Features</span>
-                </a>
                 <button
                   type="button"
                   onClick={() => setDemoOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-medium text-[#737373] hover:text-[#171717] transition-colors whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium text-[#737373] hover:text-[#171717] transition-colors whitespace-nowrap"
                 >
                   <Play className="h-3.5 w-3.5 text-[#DC2626]" />
                   <span>Interactive Walkthrough</span>
@@ -328,10 +401,10 @@ export function LandingPage({ onStartCreating, onOpenTemplates }: LandingPagePro
                     <span className="h-2.5 w-2.5 rounded-full bg-[#E5E5E5]" />
                   </div>
                   <span className="text-xs font-medium text-[#171717] truncate">
-                    founder-podcast-ep42.mp4
+                    youtube.com/watch?v=founder-podcast-ep42
                   </span>
                   <span className="hidden sm:inline text-xs text-[#737373] font-mono tabular-nums">
-                    48:15 · 1080p
+                    48:15 · YouTube VOD
                   </span>
                 </div>
 

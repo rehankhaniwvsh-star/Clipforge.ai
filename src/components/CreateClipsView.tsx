@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   AudioWaveform,
@@ -11,7 +11,6 @@ import {
   Play,
   Scissors,
   Sparkles,
-  Upload,
   X,
 } from 'lucide-react';
 import {
@@ -50,6 +49,8 @@ interface CreateClipsViewProps {
   defaultAspectRatio: AspectRatio;
   availableCreditsMinutes: number;
   maxUploadSizeMB: number;
+  initialYouTubeUrl?: string | null;
+  onConsumeInitialUrl?: () => void;
   onGenerateClips: (
     video: UploadedVideoInfo,
     projectName: string,
@@ -67,13 +68,14 @@ export function CreateClipsView({
   defaultAspectRatio,
   availableCreditsMinutes,
   maxUploadSizeMB,
+  initialYouTubeUrl,
+  onConsumeInitialUrl,
   onGenerateClips,
 }: CreateClipsViewProps) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
   const sourceVideoRef = useRef<HTMLVideoElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const [isDragging, setIsDragging] = useState(false);
   const [uploadedVideo, setUploadedVideo] = useState<UploadedVideoInfo | null>(null);
   const [projectName, setProjectName] = useState('');
   const [uploadWarning, setUploadWarning] = useState<string | null>(null);
@@ -189,23 +191,6 @@ export function CreateClipsView({
       });
     } finally {
       setActiveOperation('none');
-    }
-  };
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (file) {
-      void loadLocalFile(file);
-    }
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      void loadLocalFile(file);
     }
   };
 
@@ -365,8 +350,9 @@ export function CreateClipsView({
     void el.play().catch(() => {});
   };
 
-  const handleUrlImport = async () => {
-    const validation = validateVideoUrl(urlInput);
+  const handleUrlImport = async (overrideUrl?: string) => {
+    const rawUrl = (overrideUrl ?? urlInput).trim();
+    const validation = validateVideoUrl(rawUrl);
     if (validation.status === 'empty' || validation.status === 'invalid') {
       setUrlFeedback({ tone: 'error', text: validation.message });
       return;
@@ -396,7 +382,7 @@ export function CreateClipsView({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
-          body: JSON.stringify({ url: urlInput.trim() }),
+          body: JSON.stringify({ url: rawUrl }),
         });
 
         const data = (await res.json()) as Record<string, unknown>;
@@ -490,7 +476,7 @@ export function CreateClipsView({
     });
 
     try {
-      const targetUrl = urlInput.trim();
+      const targetUrl = rawUrl;
       let response: Response;
       try {
         response = await fetch(targetUrl, { signal: controller.signal });
@@ -556,6 +542,17 @@ export function CreateClipsView({
     }
   };
 
+  // Auto-import when the user submits a YouTube URL from the Home Page hero
+  useEffect(() => {
+    if (!initialYouTubeUrl) return;
+    const incoming = initialYouTubeUrl.trim();
+    if (!incoming) return;
+    setUrlInput(incoming);
+    onConsumeInitialUrl?.();
+    void handleUrlImport(incoming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialYouTubeUrl]);
+
   const handleClearVideo = () => {
     abortControllerRef.current?.abort();
     objectUrlManager.revoke(PREVIEW_VIDEO_URL_KEY);
@@ -564,9 +561,9 @@ export function CreateClipsView({
     setSelectedAiClipIndices([]);
     setProjectName('');
     setUploadWarning(null);
+    setUrlFeedback(null);
     setStatus({ stage: 'idle', progress: null, detail: '' });
     setActiveOperation('none');
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const trimValidation = uploadedVideo
@@ -589,7 +586,11 @@ export function CreateClipsView({
         await handleUrlImport();
         return;
       }
-      fileInputRef.current?.click();
+      urlInputRef.current?.focus();
+      setUrlFeedback({
+        tone: 'error',
+        text: 'Paste a YouTube link in Step 1 first to generate clips.',
+      });
       return;
     }
 
@@ -699,8 +700,8 @@ export function CreateClipsView({
           Create Clips
         </h1>
         <p className="text-sm text-[#737373] mt-1">
-          Upload a long video, configure AI clip detection or exact trim bounds, and render real
-          playable MP4 clips in your browser.
+          Paste a YouTube video or livestream link, configure AI moment detection or exact trim
+          bounds, and generate editable short clips.
         </p>
       </div>
 
@@ -717,83 +718,102 @@ export function CreateClipsView({
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Upload Card + Preview + Metadata + Audio/Gemini AI */}
+        {/* Left Column: YouTube Link Card + Preview + Metadata + Gemini AI */}
         <div className="lg:col-span-7 space-y-5">
           <div className="rounded-2xl bg-[#FFFFFF] border border-[#E5E5E5] p-5 sm:p-6 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-display text-base font-semibold text-[#171717]">
-                1. Start with a video
-              </h2>
-              <span className="text-xs font-mono tabular-nums text-[#737373]">
-                Up to {maxUploadSizeMB} MB · MP4 / WebM / MOV
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-[#DC2626]" />
+                <h2 className="font-display text-base font-semibold text-[#171717]">
+                  1. Paste a YouTube Link
+                </h2>
+              </div>
+              <span className="text-xs text-[#737373]">
+                YouTube watch, Shorts &amp; Live VOD supported
               </span>
             </div>
 
             {!uploadedVideo ? (
-              <div
-                onClick={() => {
-                  if (!isBusy) fileInputRef.current?.click();
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                className={`rounded-xl border-2 border-dashed p-8 sm:p-12 text-center transition-colors ${
-                  isBusy ? 'cursor-wait' : 'cursor-pointer'
-                } ${
-                  isDragging
-                    ? 'border-[#DC2626] bg-[#FEF2F2]'
-                    : 'border-[#E5E5E5] bg-[#FAFAFA] hover:border-[#D4D4D4] hover:bg-[#F5F5F5]/60'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  id="video-upload-input"
-                  data-testid="video-file-input"
-                  type="file"
-                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-                  onChange={handleFileChange}
-                  disabled={isBusy}
-                  className="sr-only"
-                />
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]">
-                  <Upload className="h-5 w-5" />
+              <div className="rounded-xl border border-[#E5E5E5] bg-[#FAFAFA] p-6 sm:p-8 space-y-5">
+                <div className="text-center space-y-2">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]">
+                    <Link2 className="h-5 w-5" />
+                  </div>
+                  <p className="font-display text-lg font-semibold text-[#171717]">
+                    Import from YouTube
+                  </p>
+                  <p className="text-sm text-[#737373] max-w-md mx-auto">
+                    Paste any public YouTube video, podcast, or Live VOD link below. Gemini AI
+                    analyzes the video directly—no file upload needed.
+                  </p>
                 </div>
-                <p className="mt-4 font-display text-lg font-semibold text-[#171717]">
-                  Start with a video
-                </p>
-                <p className="mt-1 text-sm text-[#737373] max-w-md mx-auto">
-                  Upload a long video and let AI find the best moments. Supports MP4, WebM, and
-                  browser-decoded MOV up to {maxUploadSizeMB} MB.
-                </p>
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <label htmlFor="video-url-input" className="sr-only">
+                    YouTube Video URL
+                  </label>
+                  <input
+                    ref={urlInputRef}
+                    id="video-url-input"
+                    data-testid="video-url-input"
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        void handleUrlImport();
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=... or youtube.com/live/..."
+                    className="flex-1 rounded-xl bg-[#FFFFFF] border border-[#E5E5E5] px-4 py-3 text-sm text-[#171717] placeholder:text-[#A3A3A3] focus:outline-none focus:border-[#DC2626]"
+                  />
                   <button
                     type="button"
+                    data-testid="video-url-import-btn"
                     disabled={isBusy}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] disabled:opacity-60 text-white text-sm font-semibold transition-colors whitespace-nowrap shadow-xs"
+                    onClick={() => void handleUrlImport()}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-sm font-semibold text-white transition-colors whitespace-nowrap shrink-0 disabled:opacity-50 shadow-xs"
                   >
-                    Browse Files
+                    {activeOperation === 'upload' ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Load Video</span>
+                      </>
+                    )}
                   </button>
-                  {isBusy && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCancelOperation();
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FEF2F2] border border-[#E5E5E5] text-[#DC2626] text-sm font-medium transition-colors whitespace-nowrap"
-                    >
-                      Cancel Upload
-                    </button>
-                  )}
                 </div>
+
+                {urlFeedback && (
+                  <div
+                    role={urlFeedback.tone === 'error' ? 'alert' : 'status'}
+                    data-testid="url-import-feedback"
+                    className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 text-xs border ${
+                      urlFeedback.tone === 'error'
+                        ? 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
+                        : urlFeedback.tone === 'success'
+                          ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#15803D]'
+                          : 'bg-[#FFFFFF] border-[#E5E5E5] text-[#525252]'
+                    }`}
+                  >
+                    {urlFeedback.tone === 'success' ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-[#16A34A]" />
+                    ) : (
+                      <Info className="h-4 w-4 shrink-0 mt-0.5 text-[#DC2626]" />
+                    )}
+                    <span className="leading-relaxed">{urlFeedback.text}</span>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-center text-[#737373]">
+                  Supports youtube.com/watch, youtube.com/live, youtube.com/shorts, and youtu.be
+                  links
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1233,78 +1253,67 @@ export function CreateClipsView({
             )}
           </div>
 
-          {/* Video URL Import Card */}
-          <div className="rounded-2xl bg-[#FFFFFF] border border-[#E5E5E5] p-5 sm:p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-[#DC2626]" />
-                <h2 className="font-display text-base font-semibold text-[#171717]">
-                  Import from Video URL
-                </h2>
+          {uploadedVideo && (
+            <div className="rounded-2xl bg-[#FFFFFF] border border-[#E5E5E5] p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[#171717]">
+                  Load a different YouTube link
+                </span>
+                <span className="text-[11px] text-[#737373]">
+                  Replaces current video in workspace
+                </span>
               </div>
-              <span className="text-xs text-[#737373]">
-                YouTube (watch, live, shorts) &amp; direct MP4/WebM supported
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <label htmlFor="video-url-input" className="sr-only">
-                Video URL
-              </label>
-              <input
-                id="video-url-input"
-                data-testid="video-url-input"
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    void handleUrlImport();
-                  }
-                }}
-                placeholder="Paste a YouTube link (watch, live, shorts) or direct .mp4/.webm URL"
-                className="flex-1 rounded-lg bg-[#FFFFFF] border border-[#E5E5E5] px-3.5 py-2.5 text-sm text-[#171717] placeholder:text-[#A3A3A3] focus:outline-none focus:border-[#DC2626]"
-              />
-              <button
-                type="button"
-                data-testid="video-url-import-btn"
-                disabled={isBusy}
-                onClick={() => void handleUrlImport()}
-                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-sm font-semibold text-white transition-colors whitespace-nowrap shrink-0 disabled:opacity-50"
-              >
-                {activeOperation === 'upload' && !uploadedVideo ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Importing...</span>
-                  </>
-                ) : (
-                  <span>Import</span>
-                )}
-              </button>
-            </div>
-
-            {urlFeedback && (
-              <div
-                role={urlFeedback.tone === 'error' ? 'alert' : 'status'}
-                data-testid="url-import-feedback"
-                className={`flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 text-xs border ${
-                  urlFeedback.tone === 'error'
-                    ? 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
-                    : urlFeedback.tone === 'success'
-                      ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#15803D]'
-                      : 'bg-[#FAFAFA] border-[#E5E5E5] text-[#525252]'
-                }`}
-              >
-                {urlFeedback.tone === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-[#16A34A]" />
-                ) : (
-                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-[#DC2626]" />
-                )}
-                <span className="leading-relaxed">{urlFeedback.text}</span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <label htmlFor="video-url-switch-input" className="sr-only">
+                  Switch YouTube URL
+                </label>
+                <input
+                  id="video-url-switch-input"
+                  data-testid="video-url-input"
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleUrlImport();
+                    }
+                  }}
+                  placeholder="Paste another YouTube link..."
+                  className="flex-1 rounded-lg bg-[#FFFFFF] border border-[#E5E5E5] px-3 py-2 text-xs text-[#171717] placeholder:text-[#A3A3A3] focus:outline-none focus:border-[#DC2626]"
+                />
+                <button
+                  type="button"
+                  data-testid="video-url-import-btn"
+                  disabled={isBusy}
+                  onClick={() => void handleUrlImport()}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#FAFAFA] hover:bg-[#FEF2F2] hover:text-[#DC2626] border border-[#E5E5E5] text-xs font-semibold text-[#171717] transition-colors whitespace-nowrap shrink-0 disabled:opacity-50"
+                >
+                  <span>Load New Link</span>
+                </button>
               </div>
-            )}
-          </div>
+              {urlFeedback && (
+                <div
+                  role={urlFeedback.tone === 'error' ? 'alert' : 'status'}
+                  data-testid="url-import-feedback"
+                  className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs border ${
+                    urlFeedback.tone === 'error'
+                      ? 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
+                      : urlFeedback.tone === 'success'
+                        ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#15803D]'
+                        : 'bg-[#FAFAFA] border-[#E5E5E5] text-[#525252]'
+                  }`}
+                >
+                  {urlFeedback.tone === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-[#16A34A]" />
+                  ) : (
+                    <Info className="h-4 w-4 shrink-0 mt-0.5 text-[#DC2626]" />
+                  )}
+                  <span className="leading-relaxed">{urlFeedback.text}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Column: AI Clip Settings */}
@@ -1539,16 +1548,16 @@ export function CreateClipsView({
             {!uploadedVideo && (
               <div className="flex items-center justify-between gap-3 rounded-xl bg-[#FAFAFA] border border-[#E5E5E5] px-3.5 py-2.5 text-xs">
                 <span className="text-[#737373] leading-snug">
-                  Upload a video in Step 1 to enable clip generation.
+                  Paste a YouTube link in Step 1 to enable clip generation.
                 </span>
                 <button
                   type="button"
                   disabled={isBusy}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => urlInputRef.current?.focus()}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-[#DC2626] font-semibold transition-colors whitespace-nowrap shrink-0"
                 >
-                  <Upload className="h-3.5 w-3.5" />
-                  <span>Choose Video</span>
+                  <Link2 className="h-3.5 w-3.5" />
+                  <span>Paste Link</span>
                 </button>
               </div>
             )}

@@ -819,15 +819,42 @@ export async function analyzeYouTubeVideoWithGemini(
                 items: {
                   type: Type.OBJECT,
                   properties: {
-                    title: { type: Type.STRING },
-                    category: { type: Type.STRING },
-                    startTime: { type: Type.NUMBER },
-                    endTime: { type: Type.NUMBER },
-                    duration: { type: Type.NUMBER },
-                    hook: { type: Type.STRING },
-                    reason: { type: Type.STRING },
-                    score: { type: Type.INTEGER },
-                    caption: { type: Type.STRING },
+                    title: {
+                      type: Type.STRING,
+                      description: 'Compelling short-form clip title grounded in the spoken moment.',
+                    },
+                    category: {
+                      type: Type.STRING,
+                      description: 'One of: funny, interesting, educational, podcast, gaming, reactions, emotional, hook.',
+                    },
+                    startTime: {
+                      type: Type.NUMBER,
+                      description: 'Start time in seconds relative to the provided segment (0..segmentLength).',
+                    },
+                    endTime: {
+                      type: Type.NUMBER,
+                      description: 'End time in seconds relative to the provided segment, strictly greater than startTime.',
+                    },
+                    duration: {
+                      type: Type.NUMBER,
+                      description: 'Duration in seconds (endTime - startTime).',
+                    },
+                    hook: {
+                      type: Type.STRING,
+                      description: 'Opening spoken hook or moment that grabs attention.',
+                    },
+                    reason: {
+                      type: Type.STRING,
+                      description: 'Specific reason why this moment is engaging.',
+                    },
+                    score: {
+                      type: Type.INTEGER,
+                      description: 'Engagement score on a 1 to 100 scale (e.g. 78, 86, 94).',
+                    },
+                    caption: {
+                      type: Type.STRING,
+                      description: 'Punchy opening caption line grounded in what is spoken.',
+                    },
                   },
                   required: [
                     'title',

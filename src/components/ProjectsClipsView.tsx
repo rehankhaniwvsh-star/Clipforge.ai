@@ -177,7 +177,7 @@ export function ProjectsClipsView({
             <p className="text-sm text-[#737373] leading-relaxed">
               {savedOnly
                 ? 'Bookmark your best clips from My Projects to keep them pinned here for quick publishing.'
-                : 'Upload a video in Create Clips to detect highlights with Gemini AI or cut exact MP4 segments.'}
+                : 'Paste a YouTube link in Create Clips to detect highlights with Gemini AI or cut exact timestamp segments.'}
             </p>
           </div>
           {!savedOnly && (
@@ -288,7 +288,13 @@ export function ProjectsClipsView({
                       ) : (
                         <Download className="h-3.5 w-3.5" />
                       )}
-                      <span>{isExporting ? '...' : 'MP4'}</span>
+                      <span>
+                        {isExporting
+                          ? '...'
+                          : clip.youtubeVideoId && !clip.videoUrl
+                            ? 'Cut File'
+                            : 'MP4'}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -364,7 +370,9 @@ export function ProjectsClipsView({
                 }}
                 className="px-4 py-2 rounded-lg bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold"
               >
-                Download MP4
+                {previewClip.youtubeVideoId && !previewClip.videoUrl
+                  ? 'Export Cut Package'
+                  : 'Download MP4'}
               </button>
             </div>
           </div>
