@@ -1,0 +1,6 @@
+{
+  "name": "ClipForge AI",
+  "description": "Turn long videos into viral shorts with smart clip segmentation, dynamic caption templates, and a browser-based vertical video editor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

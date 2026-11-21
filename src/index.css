@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: #FFFFFF;
+    color: #171717;
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #171717;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Minimal editorial light scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAFAFA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4D4D4;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A3A3A3;
+}
+
+/* Custom range inputs matching ClipForge white & red system */
+input[type="range"].cf-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #E5E5E5;
+  height: 4px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+input[type="range"].cf-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #DC2626;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
+}
+
+input[type="range"].cf-range::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  background: #B91C1C;
+}
+
+input[type="range"].cf-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+/* Dark-surface slider variant used inside the video player bar */
+input[type="range"].cf-range-dark {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.28);
+  height: 4px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+input[type="range"].cf-range-dark::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  background: #DC2626;
+  border: 2px solid #FFFFFF;
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+input[type="range"].cf-range-dark::-webkit-slider-thumb:hover {
+  transform: scale(1.14);
+}
