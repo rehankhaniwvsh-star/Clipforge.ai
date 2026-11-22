@@ -112,3 +112,27 @@ input[type="range"].cf-range-dark::-webkit-slider-thumb {
 input[type="range"].cf-range-dark::-webkit-slider-thumb:hover {
   transform: scale(1.14);
 }
+
+/* Compositor-only real-time creator reel camera motion */
+@keyframes cf-reel-pan {
+  0% {
+    transform: scale(1.01) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.075) translate3d(0, -1.6%, 0);
+  }
+  100% {
+    transform: scale(1.01) translate3d(0, 0, 0);
+  }
+}
+
+.cf-reel-live-motion {
+  animation: cf-reel-pan 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-reel-live-motion {
+    animation: none;
+  }
+}

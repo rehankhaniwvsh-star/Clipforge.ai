@@ -21,6 +21,7 @@ import { classifyVideoUrl } from '../utils/urlImport';
 import { BrandMark } from './BrandMark';
 import { CaptionRenderer } from './CaptionRenderer';
 import { DemoModal } from './DemoModal';
+import { ReelCircleShowcase } from './ReelCircleShowcase';
 
 interface LandingPageProps {
   onStartCreating: () => void;
@@ -389,6 +390,9 @@ export function LandingPage({
                 </button>
               </div>
             </div>
+
+            {/* 9:16 REEL CIRCLE ANIMATION SHOWCASE — Real-Time Creator Reels */}
+            <ReelCircleShowcase onGenerateFromYouTubeUrl={onGenerateFromYouTubeUrl} />
 
             {/* PRODUCT VISUAL SHOWCASE — Realistic Interactive ClipForge Studio */}
             <div className="mt-14 rounded-2xl bg-[#FAFAFA] border border-[#E5E5E5] shadow-[0_12px_40px_-16px_rgba(23,23,23,0.1)] overflow-hidden">
